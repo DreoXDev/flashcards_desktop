@@ -17,7 +17,14 @@ Only `schemaVersion: 1` is supported.
     "description": "Flashcard sul datapath MIPS.",
     "subject": "Architettura degli Elaboratori",
     "tags": ["architettura", "mips"],
-    "cards": []
+    "cards": [
+      {
+        "id": "datapath-alu-001",
+        "type": "open",
+        "question": "Qual e il ruolo della ALU nel datapath?",
+        "answer": "La ALU esegue operazioni aritmetiche e logiche."
+      }
+    ]
   }
 }
 ```

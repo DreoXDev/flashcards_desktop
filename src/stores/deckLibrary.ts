@@ -2,12 +2,20 @@ import { defineStore } from 'pinia'
 import { open } from '@tauri-apps/plugin-dialog'
 import { toast } from 'vue-sonner'
 import { deckApi, normalizeError } from '@/lib/api'
-import type { AppErrorPayload, DeckSummary, RecentDeck } from '@/types/deck'
+import type {
+  ActiveStudySessionSummary,
+  AppErrorPayload,
+  DeckSummary,
+  FavoriteDeck,
+  RecentDeck,
+} from '@/types/deck'
 
 export const useDeckLibraryStore = defineStore('deckLibrary', {
   state: () => ({
     decks: [] as DeckSummary[],
     recentDecks: [] as RecentDeck[],
+    activeSessions: [] as ActiveStudySessionSummary[],
+    favoriteDecks: [] as FavoriteDeck[],
     loading: false,
     importing: false,
     error: null as AppErrorPayload | null,
@@ -17,8 +25,16 @@ export const useDeckLibraryStore = defineStore('deckLibrary', {
       this.loading = true
       this.error = null
       try {
-        this.decks = await deckApi.listDecks()
-        this.recentDecks = await deckApi.listRecentDecks()
+        const [decks, recentDecks, activeSessions, favoriteDecks] = await Promise.all([
+          deckApi.listDecks(),
+          deckApi.listRecentDecks(),
+          deckApi.listActiveStudySessions(),
+          deckApi.listFavoriteDecks(),
+        ])
+        this.decks = decks
+        this.recentDecks = recentDecks
+        this.activeSessions = activeSessions
+        this.favoriteDecks = favoriteDecks
       } catch (error) {
         this.error = normalizeError(error)
         toast.error(this.error.message)
@@ -63,10 +79,19 @@ export const useDeckLibraryStore = defineStore('deckLibrary', {
         this.importing = false
       }
     },
-    async deleteDeck(deck: DeckSummary | RecentDeck) {
+    async deleteDeck(deck: DeckSummary | RecentDeck | FavoriteDeck) {
       try {
         await deckApi.deleteDeck(deck.id)
         toast.success('Deck deleted')
+        await this.loadDecks()
+      } catch (error) {
+        const payload = normalizeError(error)
+        toast.error(payload.message)
+      }
+    },
+    async setFavorite(deckId: string, favorite: boolean) {
+      try {
+        await deckApi.setDeckFavorite(deckId, favorite)
         await this.loadDecks()
       } catch (error) {
         const payload = normalizeError(error)

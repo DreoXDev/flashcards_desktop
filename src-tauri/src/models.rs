@@ -68,6 +68,47 @@ pub struct DeckSummary {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct FavoriteDeck {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub subject: Option<String>,
+    pub tags: Vec<String>,
+    pub card_count: i64,
+    pub favorited_at: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveStudySessionSummary {
+    pub id: String,
+    pub deck_id: String,
+    pub deck_name: String,
+    pub session_mode: String,
+    pub study_mode: String,
+    pub card_count: i64,
+    pub answered_count: i64,
+    pub known_count: i64,
+    pub unknown_count: i64,
+    pub current_index: i64,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveStudySessionDetail {
+    pub id: String,
+    pub deck_id: String,
+    pub session_mode: String,
+    pub study_mode: String,
+    pub card_ids: Vec<String>,
+    pub current_index: i64,
+    pub states_json: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RecentDeck {
     pub id: String,
     pub name: String,
@@ -124,4 +165,16 @@ pub struct SaveStudyHistoryRequest {
     pub last_known_count: i64,
     pub last_unknown_count: i64,
     pub last_unknown_card_ids: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveActiveStudySessionRequest {
+    pub id: String,
+    pub deck_id: String,
+    pub session_mode: String,
+    pub study_mode: String,
+    pub card_ids: Vec<String>,
+    pub current_index: i64,
+    pub states_json: String,
 }

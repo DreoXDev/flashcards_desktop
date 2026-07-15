@@ -20,6 +20,10 @@ export const router = createRouter({
           typeof route.query.cards === 'string' && route.query.cards.length > 0
             ? route.query.cards.split(',').filter(Boolean)
             : [],
+        resumeSessionId:
+          typeof route.query.resume === 'string' && route.query.resume.length > 0
+            ? route.query.resume
+            : null,
       }),
     },
   ],

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Circle, List, RotateCcw, X } from 'lucide-vue-next'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -9,6 +9,7 @@ import { deckApi, normalizeError } from '@/lib/api'
 import { shuffled } from '@/lib/shuffle'
 import type {
   AppErrorPayload,
+  CardStudyState,
   DeckDetail,
   Flashcard,
   StudyMode,
@@ -16,19 +17,12 @@ import type {
   StudySessionMode,
 } from '@/types/deck'
 
-interface CardStudyState {
-  cardId: string
-  result: StudyResult
-  visited: boolean
-  answerVisible: boolean
-  selectedOptionIds: string[]
-}
-
 const props = defineProps<{
   deckId: string
   mode: StudyMode
   sessionMode: StudySessionMode
   cardIds: string[]
+  resumeSessionId: string | null
 }>()
 
 const router = useRouter()
@@ -41,6 +35,9 @@ const error = ref<AppErrorPayload | null>(null)
 const sidebarOpen = ref(true)
 const summaryOpen = ref(false)
 const savingSummary = ref(false)
+const activeSessionId = ref('')
+const saveTimer = ref<number | null>(null)
+const saveReady = ref(false)
 
 const currentCard = computed(() => cards.value[currentIndex.value] ?? null)
 const currentState = computed(() => (currentCard.value ? states.value[currentCard.value.id] : null))
@@ -63,6 +60,21 @@ async function load() {
   summaryOpen.value = false
   try {
     deck.value = await deckApi.getDeck(props.deckId)
+
+    if (props.resumeSessionId) {
+      const saved = await deckApi.getActiveStudySession(props.resumeSessionId)
+      activeSessionId.value = saved.id
+      const restoredCards = saved.cardIds
+            .map(cardId => deck.value?.cards.find(card => card.id === cardId))
+            .filter((card): card is Flashcard => Boolean(card))
+      cards.value = restoredCards
+      currentIndex.value = Math.min(saved.currentIndex, Math.max(restoredCards.length - 1, 0))
+      states.value = restoreStates(saved.statesJson, restoredCards)
+      if (cards.value[currentIndex.value]) states.value[cards.value[currentIndex.value].id].visited = true
+      saveReady.value = true
+      return
+    }
+
     const sourceCards =
       props.sessionMode === 'review-unknown'
         ? props.cardIds
@@ -71,6 +83,7 @@ async function load() {
         : [...deck.value.cards]
 
     cards.value = props.mode === 'random' && props.sessionMode === 'full-deck' ? shuffled(sourceCards) : sourceCards
+    activeSessionId.value = createSessionId(deck.value.id, props.sessionMode, cards.value)
     currentIndex.value = 0
     states.value = Object.fromEntries(
       cards.value.map(card => [
@@ -85,11 +98,39 @@ async function load() {
       ])
     )
     if (cards.value[0]) states.value[cards.value[0].id].visited = true
+    saveReady.value = true
   } catch (err) {
     error.value = normalizeError(err)
   } finally {
     loading.value = false
   }
+}
+
+function createSessionId(deckId: string, sessionMode: StudySessionMode, sessionCards: Flashcard[]) {
+  const suffix = sessionMode === 'review-unknown' ? sessionCards.map(card => card.id).join('-') : 'full'
+  return `${deckId}__${sessionMode}__${suffix}`
+}
+
+function restoreStates(statesJson: string, restoredCards: Flashcard[]) {
+  let parsed: Record<string, CardStudyState> = {}
+  try {
+    parsed = JSON.parse(statesJson) as Record<string, CardStudyState>
+  } catch {
+    parsed = {}
+  }
+
+  return Object.fromEntries(
+    restoredCards.map(card => [
+      card.id,
+      {
+        cardId: card.id,
+        result: parsed[card.id]?.result ?? null,
+        visited: parsed[card.id]?.visited ?? false,
+        answerVisible: parsed[card.id]?.answerVisible ?? false,
+        selectedOptionIds: parsed[card.id]?.selectedOptionIds ?? [],
+      },
+    ])
+  )
 }
 
 function goToCard(index: number) {
@@ -115,6 +156,7 @@ function toggleOpenCard() {
 function markCurrent(result: Exclude<StudyResult, null>) {
   if (!currentState.value) return
   currentState.value.result = result
+  goToNextUnansweredOrNext()
 }
 
 function submitClosedAnswer(selectedOptionIds: string[]) {
@@ -129,6 +171,22 @@ function submitClosedAnswer(selectedOptionIds: string[]) {
       : 'unknown'
 }
 
+function goToNextUnansweredOrNext() {
+  const nextUnansweredIndex = cards.value.findIndex(
+    (card, index) => index > currentIndex.value && states.value[card.id]?.result === null
+  )
+  if (nextUnansweredIndex >= 0) {
+    goToCard(nextUnansweredIndex)
+    return
+  }
+  const anyUnansweredIndex = cards.value.findIndex(card => states.value[card.id]?.result === null)
+  if (anyUnansweredIndex >= 0) {
+    goToCard(anyUnansweredIndex)
+    return
+  }
+  nextCard()
+}
+
 async function completeSession() {
   if (!deck.value || !isSessionComplete.value) return
   savingSummary.value = true
@@ -139,6 +197,9 @@ async function completeSession() {
       lastUnknownCount: unknownCount.value,
       lastUnknownCardIds: unknownCards.value.map(card => card.id),
     })
+    if (activeSessionId.value) {
+      await deckApi.deleteActiveStudySession(activeSessionId.value)
+    }
     summaryOpen.value = true
   } catch (err) {
     error.value = normalizeError(err)
@@ -147,32 +208,49 @@ async function completeSession() {
   }
 }
 
-function studyAgain() {
-  const baseCards = deck.value?.cards ?? []
-  cards.value = props.mode === 'random' && props.sessionMode === 'full-deck' ? shuffled(baseCards) : [...baseCards]
+function resetSession(newCards: Flashcard[]) {
+  cards.value = newCards
   currentIndex.value = 0
   summaryOpen.value = false
+  activeSessionId.value = deck.value ? createSessionId(deck.value.id, props.sessionMode, newCards) : ''
   states.value = Object.fromEntries(
-    cards.value.map(card => [
+    newCards.map(card => [
       card.id,
       { cardId: card.id, result: null, visited: false, answerVisible: false, selectedOptionIds: [] },
     ])
   )
-  if (cards.value[0]) states.value[cards.value[0].id].visited = true
+  if (newCards[0]) states.value[newCards[0].id].visited = true
+  void saveActiveSessionNow()
+}
+
+function studyAgain() {
+  const baseCards = deck.value?.cards ?? []
+  resetSession(props.mode === 'random' && props.sessionMode === 'full-deck' ? shuffled(baseCards) : [...baseCards])
 }
 
 function startUnknownReview() {
-  const reviewCards = unknownCards.value
-  cards.value = reviewCards
-  currentIndex.value = 0
-  summaryOpen.value = false
-  states.value = Object.fromEntries(
-    reviewCards.map(card => [
-      card.id,
-      { cardId: card.id, result: null, visited: false, answerVisible: false, selectedOptionIds: [] },
-    ])
-  )
-  if (reviewCards[0]) states.value[reviewCards[0].id].visited = true
+  resetSession(unknownCards.value)
+}
+
+function scheduleSaveActiveSession() {
+  if (!saveReady.value || summaryOpen.value || cards.value.length === 0 || !deck.value || !activeSessionId.value) return
+  if (saveTimer.value !== null) window.clearTimeout(saveTimer.value)
+  saveTimer.value = window.setTimeout(() => {
+    void saveActiveSessionNow()
+  }, 250)
+}
+
+async function saveActiveSessionNow() {
+  if (!saveReady.value || summaryOpen.value || cards.value.length === 0 || !deck.value || !activeSessionId.value) return
+  await deckApi.saveActiveStudySession({
+    id: activeSessionId.value,
+    deckId: deck.value.id,
+    sessionMode: props.sessionMode,
+    studyMode: props.mode,
+    cardIds: cards.value.map(card => card.id),
+    currentIndex: currentIndex.value,
+    statesJson: JSON.stringify(states.value),
+  })
 }
 
 function resultIcon(result: StudyResult) {
@@ -208,7 +286,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  if (saveTimer.value !== null) window.clearTimeout(saveTimer.value)
+  void saveActiveSessionNow()
 })
+
+watch([currentIndex, states], scheduleSaveActiveSession, { deep: true })
 </script>
 
 <template>

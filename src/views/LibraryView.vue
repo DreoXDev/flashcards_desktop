@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { BookOpen, FilePlus2, RotateCcw, Trash2 } from 'lucide-vue-next'
+import { BookOpen, FilePlus2, Play, RotateCcw, Star, Trash2 } from 'lucide-vue-next'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { useDeckLibraryStore } from '@/stores/deckLibrary'
-import type { DeckSummary, RecentDeck } from '@/types/deck'
+import type { ActiveStudySessionSummary, DeckSummary, RecentDeck } from '@/types/deck'
 
 const library = useDeckLibraryStore()
 const router = useRouter()
 const deckPendingDelete = ref<DeckSummary | RecentDeck | null>(null)
 
 const hasDecks = computed(() => library.decks.length > 0)
+const favoriteIds = computed(() => new Set(library.favoriteDecks.map(deck => deck.id)))
 
 onMounted(() => {
   void library.loadDecks()
@@ -39,6 +40,34 @@ function reviewUnknown(event: MouseEvent, deck: RecentDeck) {
       cards: deck.lastUnknownCardIds.join(','),
     },
   })
+}
+
+function continueSession(event: MouseEvent, session: ActiveStudySessionSummary) {
+  event.stopPropagation()
+  openSession(session)
+}
+
+function openSession(session: ActiveStudySessionSummary) {
+  void router.push({
+    name: 'study',
+    params: { deckId: session.deckId },
+    query: {
+      mode: session.studyMode,
+      session: session.sessionMode,
+      resume: session.id,
+    },
+  })
+}
+
+function continueSessionFromKeyboard(event: KeyboardEvent, session: ActiveStudySessionSummary) {
+  if (event.key !== 'Enter' && event.code !== 'Space') return
+  event.preventDefault()
+  openSession(session)
+}
+
+function toggleFavorite(event: MouseEvent, deckId: string) {
+  event.stopPropagation()
+  void library.setFavorite(deckId, !favoriteIds.value.has(deckId))
 }
 
 async function confirmDelete() {
@@ -82,11 +111,56 @@ async function confirmDelete() {
       </div>
 
       <template v-else>
-        <section v-if="library.recentDecks.length > 0" class="flex flex-col gap-3">
-          <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground">Recent decks</h2>
+        <section v-if="library.activeSessions.length > 0" class="flex flex-col gap-3">
+          <div class="flex items-end justify-between">
+            <div>
+              <h2 class="text-sm font-bold uppercase tracking-wider text-foreground">Continue sessions</h2>
+              <p class="mt-1 text-xs text-muted-foreground">Open sessions saved automatically while you study.</p>
+            </div>
+          </div>
           <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             <article
-              v-for="deck in library.recentDecks"
+              v-for="session in library.activeSessions"
+              :key="session.id"
+              class="group flex min-h-40 cursor-pointer flex-col rounded-lg border border-primary/35 bg-primary/10 p-5 transition-colors hover:border-primary/70 hover:bg-primary/15"
+              role="button"
+              tabindex="0"
+              @click="openSession(session)"
+              @keydown="continueSessionFromKeyboard($event, session)"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <h3 class="min-w-0 text-base font-bold group-hover:text-primary">{{ session.deckName }}</h3>
+                <BaseButton variant="primary" size="sm" @click="continueSession($event, session)">
+                  <Play class="h-3.5 w-3.5" />
+                  Continue
+                </BaseButton>
+              </div>
+              <div class="mt-4 grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <p class="text-muted-foreground">Answered</p>
+                  <p class="mt-1 font-semibold">{{ session.answeredCount }} / {{ session.cardCount }}</p>
+                </div>
+                <div>
+                  <p class="text-muted-foreground">Known</p>
+                  <p class="mt-1 font-semibold">{{ session.knownCount }}</p>
+                </div>
+                <div>
+                  <p class="text-muted-foreground">Unknown</p>
+                  <p class="mt-1 font-semibold text-primary">{{ session.unknownCount }}</p>
+                </div>
+              </div>
+              <p class="mt-auto pt-4 text-[11px] text-muted-foreground">
+                Saved {{ new Date(session.updatedAt).toLocaleString() }}
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section v-if="library.favoriteDecks.length > 0" class="flex flex-col gap-3">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground">Favorite decks</h2>
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <article
+              v-for="deck in library.favoriteDecks"
               :key="deck.id"
               class="group flex min-h-40 cursor-pointer flex-col rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/45 hover:bg-card/90"
               role="button"
@@ -97,13 +171,36 @@ async function confirmDelete() {
               <div class="flex items-start justify-between gap-3">
                 <h3 class="min-w-0 text-base font-bold group-hover:text-primary">{{ deck.name }}</h3>
                 <button
-                  class="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  :aria-label="`Delete ${deck.name}`"
-                  title="Delete deck"
-                  @click.stop="deckPendingDelete = deck"
+                  class="rounded-md p-2 text-primary hover:bg-muted"
+                  :aria-label="`Remove ${deck.name} from favorites`"
+                  title="Remove favorite"
+                  @click="toggleFavorite($event, deck.id)"
                 >
-                  <Trash2 class="h-4 w-4" />
+                  <Star class="h-4 w-4 fill-current" />
                 </button>
+              </div>
+              <p v-if="deck.description" class="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground">
+                {{ deck.description }}
+              </p>
+              <p class="mt-auto pt-4 text-sm font-semibold">{{ deck.cardCount }} cards</p>
+            </article>
+          </div>
+        </section>
+
+        <section v-if="library.recentDecks.length > 0" class="flex flex-col gap-3">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-muted-foreground">Completed recently</h2>
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <article
+              v-for="deck in library.recentDecks"
+              :key="deck.id"
+              class="group flex min-h-40 cursor-pointer flex-col rounded-lg border border-border bg-card/80 p-5 transition-colors hover:border-primary/45 hover:bg-card"
+              role="button"
+              tabindex="0"
+              @click="openDeck(deck.id)"
+              @keydown="openDeckFromKeyboard($event, deck.id)"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <h3 class="min-w-0 text-base font-bold group-hover:text-primary">{{ deck.name }}</h3>
               </div>
               <div class="mt-4 grid grid-cols-3 gap-2 text-xs">
                 <div>
@@ -153,6 +250,15 @@ async function confirmDelete() {
             <h3 class="min-w-0 flex-1 text-lg font-bold text-foreground group-hover:text-primary">
               {{ deck.name }}
             </h3>
+            <button
+              class="rounded-md p-2 transition-colors hover:bg-muted"
+              :class="favoriteIds.has(deck.id) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'"
+              :aria-label="favoriteIds.has(deck.id) ? `Remove ${deck.name} from favorites` : `Add ${deck.name} to favorites`"
+              :title="favoriteIds.has(deck.id) ? 'Remove favorite' : 'Add favorite'"
+              @click="toggleFavorite($event, deck.id)"
+            >
+              <Star class="h-4 w-4" :class="{ 'fill-current': favoriteIds.has(deck.id) }" />
+            </button>
             <button
               class="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
               :aria-label="`Delete ${deck.name}`"

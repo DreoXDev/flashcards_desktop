@@ -6,8 +6,9 @@ use libsql::{params, Database};
 use crate::{
     error::{AppError, AppResult},
     models::{
-        DeckDefinition, DeckDetail, DeckImport, DeckSummary, Flashcard, FlashcardDefinition,
-        ImportResult, RecentDeck, SaveStudyHistoryRequest,
+        ActiveStudySessionDetail, ActiveStudySessionSummary, DeckDefinition, DeckDetail,
+        DeckImport, DeckSummary, FavoriteDeck, Flashcard, FlashcardDefinition, ImportResult,
+        RecentDeck, SaveActiveStudySessionRequest, SaveStudyHistoryRequest,
     },
 };
 
@@ -72,6 +73,104 @@ pub async fn list_recent_decks(database: &Database) -> AppResult<Vec<RecentDeck>
             last_known_count: row.get(7)?,
             last_unknown_count: row.get(8)?,
             last_unknown_card_ids: parse_json_vec(&unknown_json),
+        });
+    }
+    Ok(decks)
+}
+
+pub async fn list_active_study_sessions(
+    database: &Database,
+) -> AppResult<Vec<ActiveStudySessionSummary>> {
+    let conn = database.connect()?;
+    let mut rows = conn
+        .query(
+            "SELECT s.id, s.deck_id, d.name, s.session_mode, s.study_mode,
+                    s.card_ids_json, s.current_index, s.states_json, s.updated_at
+             FROM active_study_sessions s
+             JOIN decks d ON d.id = s.deck_id
+             ORDER BY s.updated_at DESC
+             LIMIT 8",
+            (),
+        )
+        .await?;
+    let mut sessions = Vec::new();
+    while let Some(row) = rows.next().await? {
+        let card_ids_json: String = row.get(5)?;
+        let states_json: String = row.get(7)?;
+        let card_ids = parse_json_vec(&card_ids_json);
+        let (answered_count, known_count, unknown_count) = summarize_states_json(&states_json);
+        sessions.push(ActiveStudySessionSummary {
+            id: row.get(0)?,
+            deck_id: row.get(1)?,
+            deck_name: row.get(2)?,
+            session_mode: row.get(3)?,
+            study_mode: row.get(4)?,
+            card_count: card_ids.len() as i64,
+            answered_count,
+            known_count,
+            unknown_count,
+            current_index: row.get(6)?,
+            updated_at: row.get(8)?,
+        });
+    }
+    Ok(sessions)
+}
+
+pub async fn get_active_study_session(
+    database: &Database,
+    session_id: &str,
+) -> AppResult<ActiveStudySessionDetail> {
+    let conn = database.connect()?;
+    let mut rows = conn
+        .query(
+            "SELECT id, deck_id, session_mode, study_mode, card_ids_json,
+                    current_index, states_json, updated_at
+             FROM active_study_sessions
+             WHERE id = ?1",
+            params![session_id],
+        )
+        .await?;
+    let Some(row) = rows.next().await? else {
+        return Err(AppError::NotFound(session_id.to_string()));
+    };
+    let card_ids_json: String = row.get(4)?;
+    Ok(ActiveStudySessionDetail {
+        id: row.get(0)?,
+        deck_id: row.get(1)?,
+        session_mode: row.get(2)?,
+        study_mode: row.get(3)?,
+        card_ids: parse_json_vec(&card_ids_json),
+        current_index: row.get(5)?,
+        states_json: row.get(6)?,
+        updated_at: row.get(7)?,
+    })
+}
+
+pub async fn list_favorite_decks(database: &Database) -> AppResult<Vec<FavoriteDeck>> {
+    let conn = database.connect()?;
+    let mut rows = conn
+        .query(
+            "SELECT d.id, d.name, d.description, d.subject, d.tags_json,
+                    COUNT(c.id) AS card_count, f.created_at
+             FROM favorite_decks f
+             JOIN decks d ON d.id = f.deck_id
+             LEFT JOIN cards c ON c.deck_id = d.id
+             GROUP BY d.id
+             ORDER BY f.created_at DESC",
+            (),
+        )
+        .await?;
+    let mut decks = Vec::new();
+    while let Some(row) = rows.next().await? {
+        let tags_json: String = row.get(4)?;
+        decks.push(FavoriteDeck {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            description: row.get(2)?,
+            subject: row.get(3)?,
+            tags: parse_json_vec(&tags_json),
+            card_count: row.get(5)?,
+            favorited_at: row.get(6)?,
         });
     }
     Ok(decks)
@@ -176,6 +275,90 @@ pub async fn save_study_history(
         ],
     )
     .await?;
+    Ok(())
+}
+
+pub async fn save_active_study_session(
+    database: &Database,
+    session: SaveActiveStudySessionRequest,
+) -> AppResult<()> {
+    let conn = database.connect()?;
+    conn.execute("PRAGMA foreign_keys = ON", ()).await?;
+    let now = Utc::now().to_rfc3339();
+    let card_ids_json = serde_json::to_string(&session.card_ids)?;
+    let mut rows = conn
+        .query(
+            "SELECT created_at FROM active_study_sessions WHERE id = ?1",
+            params![session.id.as_str()],
+        )
+        .await?;
+    let created_at = match rows.next().await? {
+        Some(row) => row.get::<String>(0)?,
+        None => now.clone(),
+    };
+
+    conn.execute(
+        "INSERT INTO active_study_sessions
+            (id, deck_id, session_mode, study_mode, card_ids_json, current_index,
+             states_json, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         ON CONFLICT(id) DO UPDATE SET
+            deck_id = excluded.deck_id,
+            session_mode = excluded.session_mode,
+            study_mode = excluded.study_mode,
+            card_ids_json = excluded.card_ids_json,
+            current_index = excluded.current_index,
+            states_json = excluded.states_json,
+            updated_at = excluded.updated_at",
+        params![
+            session.id,
+            session.deck_id,
+            session.session_mode,
+            session.study_mode,
+            card_ids_json,
+            session.current_index,
+            session.states_json,
+            created_at,
+            now,
+        ],
+    )
+    .await?;
+    Ok(())
+}
+
+pub async fn delete_active_study_session(database: &Database, session_id: &str) -> AppResult<()> {
+    let conn = database.connect()?;
+    conn.execute(
+        "DELETE FROM active_study_sessions WHERE id = ?1",
+        params![session_id],
+    )
+    .await?;
+    Ok(())
+}
+
+pub async fn set_deck_favorite(
+    database: &Database,
+    deck_id: &str,
+    favorite: bool,
+) -> AppResult<()> {
+    let conn = database.connect()?;
+    conn.execute("PRAGMA foreign_keys = ON", ()).await?;
+    if favorite {
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO favorite_decks (deck_id, created_at)
+             VALUES (?1, ?2)
+             ON CONFLICT(deck_id) DO NOTHING",
+            params![deck_id, now],
+        )
+        .await?;
+    } else {
+        conn.execute(
+            "DELETE FROM favorite_decks WHERE deck_id = ?1",
+            params![deck_id],
+        )
+        .await?;
+    }
     Ok(())
 }
 
@@ -482,6 +665,32 @@ fn parse_json_vec(json: &str) -> Vec<String> {
     serde_json::from_str(json).unwrap_or_default()
 }
 
+fn summarize_states_json(states_json: &str) -> (i64, i64, i64) {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(states_json) else {
+        return (0, 0, 0);
+    };
+    let Some(object) = value.as_object() else {
+        return (0, 0, 0);
+    };
+    let mut answered = 0;
+    let mut known = 0;
+    let mut unknown = 0;
+    for state in object.values() {
+        match state.get("result").and_then(|result| result.as_str()) {
+            Some("known") => {
+                answered += 1;
+                known += 1;
+            }
+            Some("unknown") => {
+                answered += 1;
+                unknown += 1;
+            }
+            _ => {}
+        }
+    }
+    (answered, known, unknown)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -694,5 +903,65 @@ mod tests {
         let recent = list_recent_decks(&database).await.unwrap();
         assert_eq!(recent.len(), 1);
         assert_eq!(recent[0].last_unknown_card_ids, vec!["card-001"]);
+    }
+
+    #[tokio::test]
+    async fn save_list_and_load_active_session() {
+        let database = test_database().await;
+        import_deck_json(&database, valid_open_json(), false)
+            .await
+            .unwrap();
+        save_active_study_session(
+            &database,
+            SaveActiveStudySessionRequest {
+                id: "archi-demo__full-deck__full".into(),
+                deck_id: "archi-demo".into(),
+                session_mode: "full-deck".into(),
+                study_mode: "original".into(),
+                card_ids: vec!["card-001".into()],
+                current_index: 0,
+                states_json: r#"{"card-001":{"cardId":"card-001","result":"known","visited":true,"answerVisible":true,"selectedOptionIds":[]}}"#.into(),
+            },
+        )
+        .await
+        .unwrap();
+
+        let sessions = list_active_study_sessions(&database).await.unwrap();
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].answered_count, 1);
+        assert_eq!(sessions[0].known_count, 1);
+
+        let detail = get_active_study_session(&database, "archi-demo__full-deck__full")
+            .await
+            .unwrap();
+        assert_eq!(detail.card_ids, vec!["card-001"]);
+
+        delete_active_study_session(&database, "archi-demo__full-deck__full")
+            .await
+            .unwrap();
+        assert!(list_active_study_sessions(&database)
+            .await
+            .unwrap()
+            .is_empty());
+    }
+
+    #[tokio::test]
+    async fn favorite_decks_can_be_toggled() {
+        let database = test_database().await;
+        import_deck_json(&database, valid_open_json(), false)
+            .await
+            .unwrap();
+
+        set_deck_favorite(&database, "archi-demo", true)
+            .await
+            .unwrap();
+        let favorites = list_favorite_decks(&database).await.unwrap();
+        assert_eq!(favorites.len(), 1);
+        assert_eq!(favorites[0].id, "archi-demo");
+
+        set_deck_favorite(&database, "archi-demo", false)
+            .await
+            .unwrap();
+        assert!(list_favorite_decks(&database).await.unwrap().is_empty());
     }
 }

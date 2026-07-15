@@ -14,6 +14,16 @@ export interface DeckSummary {
   updatedAt: string
 }
 
+export interface FavoriteDeck {
+  id: string
+  name: string
+  description?: string | null
+  subject?: string | null
+  tags: string[]
+  cardCount: number
+  favoritedAt: string
+}
+
 export interface DeckDetail {
   id: string
   name: string
@@ -71,4 +81,47 @@ export interface SaveStudyHistoryRequest {
   lastKnownCount: number
   lastUnknownCount: number
   lastUnknownCardIds: string[]
+}
+
+export interface CardStudyState {
+  cardId: string
+  result: StudyResult
+  visited: boolean
+  answerVisible: boolean
+  selectedOptionIds: string[]
+}
+
+export interface ActiveStudySessionSummary {
+  id: string
+  deckId: string
+  deckName: string
+  sessionMode: StudySessionMode
+  studyMode: StudyMode
+  cardCount: number
+  answeredCount: number
+  knownCount: number
+  unknownCount: number
+  currentIndex: number
+  updatedAt: string
+}
+
+export interface ActiveStudySessionDetail {
+  id: string
+  deckId: string
+  sessionMode: StudySessionMode
+  studyMode: StudyMode
+  cardIds: string[]
+  currentIndex: number
+  statesJson: string
+  updatedAt: string
+}
+
+export interface SaveActiveStudySessionRequest {
+  id: string
+  deckId: string
+  sessionMode: StudySessionMode
+  studyMode: StudyMode
+  cardIds: string[]
+  currentIndex: number
+  statesJson: string
 }

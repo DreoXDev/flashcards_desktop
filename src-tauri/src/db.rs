@@ -34,7 +34,9 @@ pub async fn init_database() -> AppResult<Database> {
 }
 
 fn default_database_path() -> AppResult<PathBuf> {
-    let mut path = std::env::current_dir()?;
+    let mut path = dirs::data_local_dir().unwrap_or_else(std::env::temp_dir);
+    path.push("flashcards_desktop");
+    std::fs::create_dir_all(&path)?;
     path.push("flashcards_desktop.db");
     Ok(path)
 }
@@ -88,6 +90,37 @@ pub(crate) async fn run_migrations(database: &Database) -> AppResult<()> {
             last_known_count INTEGER NOT NULL,
             last_unknown_count INTEGER NOT NULL,
             last_unknown_card_ids_json TEXT NOT NULL DEFAULT '[]',
+            FOREIGN KEY (deck_id) REFERENCES decks(id) ON DELETE CASCADE
+        )",
+        (),
+    )
+    .await?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS active_study_sessions (
+            id TEXT PRIMARY KEY,
+            deck_id TEXT NOT NULL,
+            session_mode TEXT NOT NULL,
+            study_mode TEXT NOT NULL,
+            card_ids_json TEXT NOT NULL,
+            current_index INTEGER NOT NULL,
+            states_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (deck_id) REFERENCES decks(id) ON DELETE CASCADE
+        )",
+        (),
+    )
+    .await?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_active_sessions_updated_at
+         ON active_study_sessions(updated_at)",
+        (),
+    )
+    .await?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS favorite_decks (
+            deck_id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
             FOREIGN KEY (deck_id) REFERENCES decks(id) ON DELETE CASCADE
         )",
         (),

@@ -26,11 +26,17 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::list_decks,
             commands::list_recent_decks,
+            commands::list_active_study_sessions,
+            commands::get_active_study_session,
+            commands::list_favorite_decks,
             commands::get_deck,
             commands::delete_deck,
             commands::import_deck_from_file,
             commands::import_deck_from_json,
             commands::save_study_history,
+            commands::save_active_study_session,
+            commands::delete_active_study_session,
+            commands::set_deck_favorite,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

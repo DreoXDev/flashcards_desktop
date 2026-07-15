@@ -29,3 +29,4 @@ libsql = "0.9"
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+dirs = "6"
