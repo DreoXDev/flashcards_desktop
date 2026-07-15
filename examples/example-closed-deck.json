@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "deck": {
+    "id": "example-closed",
+    "name": "Example Closed Deck",
+    "description": "A tiny deck with closed question cards.",
+    "subject": "Demo",
+    "tags": ["demo", "closed"],
+    "cards": [
+      {
+        "id": "closed-001",
+        "type": "closed",
+        "question": "Which file extension is accepted for deck import in v1?",
+        "options": [
+          { "id": "a", "text": ".json" },
+          { "id": "b", "text": ".xlsx" },
+          { "id": "c", "text": ".anki" }
+        ],
+        "correctOptionIds": ["a"],
+        "explanation": "The first version imports JSON decks only.",
+        "tags": ["import"]
+      },
+      {
+        "id": "closed-002",
+        "type": "closed",
+        "question": "Which card types are supported by schema version 1?",
+        "options": [
+          { "id": "a", "text": "open" },
+          { "id": "b", "text": "closed" },
+          { "id": "c", "text": "cloze" },
+          { "id": "d", "text": "audio" }
+        ],
+        "correctOptionIds": ["a", "b"],
+        "explanation": "The v1 schema deliberately supports only open and closed cards.",
+        "tags": ["schema"]
+      }
+    ]
+  }
+}

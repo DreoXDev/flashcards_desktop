@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "deck": {
+    "id": "architettura-demo",
+    "name": "Architettura Demo",
+    "description": "Small demo deck for Architettura degli Elaboratori, based on the KB topics around datapath, circuiti, ISA, memoria, and I/O.",
+    "subject": "Architettura degli Elaboratori",
+    "tags": ["architettura", "mips", "datapath"],
+    "cards": [
+      {
+        "id": "datapath-001",
+        "type": "open",
+        "question": "Qual e il ruolo del datapath in una CPU?",
+        "answer": "Il datapath contiene i componenti e i collegamenti che trasportano ed elaborano dati durante l'esecuzione delle istruzioni, come PC, memoria istruzioni, register file, ALU, mux e memoria dati.",
+        "source": "knowledge_base_ARCHI/03_notes/datapath/01_intro_datapath_control.md",
+        "tags": ["datapath", "cpu"]
+      },
+      {
+        "id": "datapath-002",
+        "type": "closed",
+        "question": "Quale componente seleziona uno tra piu ingressi in base a un segnale di controllo?",
+        "options": [
+          { "id": "a", "text": "Multiplexer" },
+          { "id": "b", "text": "Register file" },
+          { "id": "c", "text": "ALU" },
+          { "id": "d", "text": "Program counter" }
+        ],
+        "correctOptionIds": ["a"],
+        "explanation": "Un multiplexer sceglie quale ingresso propagare in uscita.",
+        "source": "knowledge_base_ARCHI/03_notes/circuiti/06_multiplexer.md",
+        "tags": ["mux", "circuiti"]
+      },
+      {
+        "id": "datapath-003",
+        "type": "open",
+        "question": "Perche il Program Counter e necessario nella fase di instruction fetch?",
+        "answer": "Il PC contiene l'indirizzo dell'istruzione da prelevare. Durante il fetch viene usato per leggere la memoria istruzioni e normalmente viene aggiornato a PC + 4.",
+        "source": "knowledge_base_ARCHI/03_notes/datapath/05_instruction_fetch_pc.md",
+        "tags": ["pc", "fetch"]
+      },
+      {
+        "id": "datapath-004",
+        "type": "closed",
+        "question": "Quali elementi sono tipicamente elementi di stato nel datapath?",
+        "options": [
+          { "id": "a", "text": "Program Counter" },
+          { "id": "b", "text": "Register file" },
+          { "id": "c", "text": "Multiplexer puramente combinatorio" },
+          { "id": "d", "text": "Porte AND isolate" }
+        ],
+        "correctOptionIds": ["a", "b"],
+        "explanation": "PC e register file memorizzano stato; mux e porte logiche sono componenti combinatori.",
+        "source": "knowledge_base_ARCHI/03_notes/datapath/04_combinational_vs_state_elements.md",
+        "tags": ["stato", "datapath"]
+      },
+      {
+        "id": "alu-001",
+        "type": "open",
+        "question": "Che cosa fa la ALU nel datapath MIPS?",
+        "answer": "La ALU esegue operazioni aritmetiche e logiche richieste dalle istruzioni, ad esempio somme per indirizzi, sottrazioni per confronti e operazioni logiche.",
+        "source": "knowledge_base_ARCHI/03_notes/circuiti/09_alu_intro.md",
+        "tags": ["alu"]
+      },
+      {
+        "id": "isa-001",
+        "type": "closed",
+        "question": "Quale famiglia di istruzioni MIPS accede alla memoria dati?",
+        "options": [
+          { "id": "a", "text": "lw e sw" },
+          { "id": "b", "text": "add e sub" },
+          { "id": "c", "text": "j" },
+          { "id": "d", "text": "slt" }
+        ],
+        "correctOptionIds": ["a"],
+        "explanation": "Load e store trasferiscono dati tra memoria e registri.",
+        "source": "knowledge_base_ARCHI/03_notes/isa/04_load_store.md",
+        "tags": ["isa", "load-store"]
+      },
+      {
+        "id": "cache-001",
+        "type": "open",
+        "question": "Qual e l'idea base della cache?",
+        "answer": "La cache sfrutta la localita dei riferimenti per tenere vicino alla CPU copie di dati o istruzioni usati di recente o probabilmente riusati, riducendo il tempo medio di accesso.",
+        "source": "knowledge_base_ARCHI/03_notes/memoria/05_cache_intro.md",
+        "tags": ["cache", "memoria"]
+      },
+      {
+        "id": "io-001",
+        "type": "closed",
+        "question": "Quali tecniche di I/O compaiono nella KB?",
+        "options": [
+          { "id": "a", "text": "Programmed I/O polling" },
+          { "id": "b", "text": "Interrupt-driven I/O" },
+          { "id": "c", "text": "DMA" },
+          { "id": "d", "text": "Spaced repetition" }
+        ],
+        "correctOptionIds": ["a", "b", "c"],
+        "explanation": "Polling, interrupt e DMA sono tecniche di gestione I/O; spaced repetition non e una tecnica di I/O.",
+        "source": "knowledge_base_ARCHI/03_notes/io",
+        "tags": ["io"]
+      },
+      {
+        "id": "circuiti-001",
+        "type": "open",
+        "question": "Qual e la differenza essenziale tra circuiti combinatori e sequenziali?",
+        "answer": "I circuiti combinatori dipendono solo dagli ingressi correnti; i circuiti sequenziali dipendono anche dallo stato memorizzato.",
+        "source": "knowledge_base_ARCHI/03_notes/circuiti/02_combinatorie_vs_sequenziali.md",
+        "tags": ["circuiti"]
+      },
+      {
+        "id": "datapath-005",
+        "type": "closed",
+        "question": "Nel single-cycle datapath, che cosa conserva l'ordine originale delle istruzioni o delle card nell'app?",
+        "options": [
+          { "id": "a", "text": "Il campo position nel database dell'app" },
+          { "id": "b", "text": "Il colore dell'interfaccia" },
+          { "id": "c", "text": "La chiave TURSO_AUTH_TOKEN" }
+        ],
+        "correctOptionIds": ["a"],
+        "explanation": "L'app salva la posizione originale di ogni card per riprodurre l'ordine del JSON.",
+        "tags": ["app", "ordine"]
+      }
+    ]
+  }
+}

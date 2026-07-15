@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "deck": {
+    "id": "example-open",
+    "name": "Example Open Deck",
+    "description": "A tiny deck with open self-assessment cards.",
+    "subject": "Demo",
+    "tags": ["demo", "open"],
+    "cards": [
+      {
+        "id": "open-001",
+        "type": "open",
+        "question": "What is a flashcard in this app?",
+        "answer": "A question and answer pair used for focused review.",
+        "tags": ["basics"]
+      },
+      {
+        "id": "open-002",
+        "type": "open",
+        "question": "Who decides whether an open card was known?",
+        "answer": "The student self-assesses after revealing the answer.",
+        "tags": ["flow"]
+      }
+    ]
+  }
+}

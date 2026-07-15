@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "deck": {
+    "id": "example-mixed",
+    "name": "Example Mixed Deck",
+    "description": "A small deck with open and closed cards.",
+    "subject": "Demo",
+    "tags": ["demo", "mixed"],
+    "cards": [
+      {
+        "id": "mixed-open-001",
+        "type": "open",
+        "question": "What happens when a deck is re-imported with the same deck.id?",
+        "answer": "The app asks whether to replace the existing deck. In v1 replacement means deleting and inserting the whole deck transactionally.",
+        "tags": ["import"]
+      },
+      {
+        "id": "mixed-closed-001",
+        "type": "closed",
+        "question": "Where does authoritative deck validation happen?",
+        "options": [
+          { "id": "a", "text": "Rust backend" },
+          { "id": "b", "text": "Vue templates" },
+          { "id": "c", "text": "CSS" }
+        ],
+        "correctOptionIds": ["a"],
+        "explanation": "Vue renders feedback, but Rust parses and validates imported decks.",
+        "tags": ["architecture"]
+      }
+    ]
+  }
+}
