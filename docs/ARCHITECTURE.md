@@ -38,6 +38,6 @@ select file
 
 ## Database
 
-The default development database is local `piano-codex-flashcards.db` in the working directory. If `TURSO_DATABASE_URL` is set to a remote Turso URL, `TURSO_AUTH_TOKEN` is required and the same database layer is used.
+The default development database is local `flashcards_desktop.db` in the working directory. If `TURSO_DATABASE_URL` is set to a remote Turso URL, `TURSO_AUTH_TOKEN` is required and the same database layer is used.
 
 `decks` stores deck metadata. `cards` stores card content and `position`, which preserves the original JSON order. Random sessions shuffle a copy in frontend memory and never change `position`.

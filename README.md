@@ -1,4 +1,4 @@
-# Piano Codex Flashcards
+# flashcards_desktop
 
 Minimal desktop flashcards for focused study.
 

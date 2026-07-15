@@ -1,5 +1,5 @@
 [package]
-name = "piano-codex-flashcards"
+name = "flashcards_desktop"
 version = "0.1.0"
 description = "Minimal desktop flashcards for focused study"
 authors = ["DreoXDev"]
@@ -11,7 +11,7 @@ rust-version = "1.77.2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "piano_codex_flashcards_lib"
+name = "flashcards_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

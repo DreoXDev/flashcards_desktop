@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    piano_codex_flashcards_lib::run();
+    flashcards_desktop_lib::run();
 }

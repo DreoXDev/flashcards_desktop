@@ -35,7 +35,7 @@ pub async fn init_database() -> AppResult<Database> {
 
 fn default_database_path() -> AppResult<PathBuf> {
     let mut path = std::env::current_dir()?;
-    path.push("piano-codex-flashcards.db");
+    path.push("flashcards_desktop.db");
     Ok(path)
 }
 

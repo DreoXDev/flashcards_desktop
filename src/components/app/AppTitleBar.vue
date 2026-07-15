@@ -29,7 +29,7 @@ function closeWindow() {
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
         data-tauri-drag-region
       >
-        Flashcards Desktop
+        flashcards_desktop
       </span>
     </div>
 

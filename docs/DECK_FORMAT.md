@@ -1,6 +1,6 @@
 # Deck Format
 
-Piano Codex Flashcards imports versioned JSON decks. The format is meant to be easy to read, easy to validate, stable in Git, and friendly to generation by an AI coding agent.
+flashcards_desktop imports versioned JSON decks. The format is meant to be easy to read, easy to validate, stable in Git, and friendly to generation by an AI coding agent.
 
 ## Schema Version
 

@@ -1218,6 +1218,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 
 [[package]]
+name = "flashcards_desktop"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "libsql",
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-log",
+ "tauri-plugin-opener",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
 name = "flate2"
 version = "1.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3078,24 +3096,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e57fef6bc5981e38c2ce2d63bfa546861309f875b8a75f092d1d54ae2d64f266"
 dependencies = [
  "siphasher",
-]
-
-[[package]]
-name = "piano-codex-flashcards"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "libsql",
- "log",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-log",
- "tauri-plugin-opener",
- "thiserror 2.0.18",
- "tokio",
 ]
 
 [[package]]

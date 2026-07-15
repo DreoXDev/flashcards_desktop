@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Piano Codex Flashcards",
+  "productName": "flashcards_desktop",
   "version": "0.1.0",
-  "identifier": "it.dreoxdev.piano-codex-flashcards",
+  "identifier": "it.dreoxdev.flashcards-desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Piano Codex Flashcards",
+        "title": "flashcards_desktop",
         "width": 1180,
         "height": 760,
         "minWidth": 920,

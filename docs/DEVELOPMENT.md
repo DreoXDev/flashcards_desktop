@@ -22,7 +22,7 @@ TURSO_DATABASE_URL=
 TURSO_AUTH_TOKEN=
 ```
 
-If `TURSO_DATABASE_URL` is empty, the app uses a local libSQL database file named `piano-codex-flashcards.db`.
+If `TURSO_DATABASE_URL` is empty, the app uses a local libSQL database file named `flashcards_desktop.db`.
 
 For a remote Turso database, set both variables. Do not ship a privileged remote token in a multi-user desktop client.
 

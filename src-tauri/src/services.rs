@@ -519,7 +519,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("piano-codex-test-{unique}.db"));
+        let path = std::env::temp_dir().join(format!("flashcards-desktop-test-{unique}.db"));
         let database = Builder::new_local(path).build().await.unwrap();
         run_migrations(&database).await.unwrap();
         database
