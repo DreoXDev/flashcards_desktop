@@ -98,5 +98,15 @@ export const useDeckLibraryStore = defineStore('deckLibrary', {
         toast.error(payload.message)
       }
     },
+    async deleteActiveSession(sessionId: string) {
+      try {
+        await deckApi.deleteActiveStudySession(sessionId)
+        toast.success('Session deleted')
+        await this.loadDecks()
+      } catch (error) {
+        const payload = normalizeError(error)
+        toast.error(payload.message)
+      }
+    },
   },
 })

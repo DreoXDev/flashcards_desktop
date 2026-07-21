@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { BookOpen, FilePlus2, Play, RotateCcw, Star, Trash2 } from 'lucide-vue-next'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
@@ -10,12 +11,19 @@ import type { ActiveStudySessionSummary, DeckSummary, RecentDeck } from '@/types
 const library = useDeckLibraryStore()
 const router = useRouter()
 const deckPendingDelete = ref<DeckSummary | RecentDeck | null>(null)
+const sessionPendingDelete = ref<ActiveStudySessionSummary | null>(null)
+const exitDialogOpen = ref(false)
 
 const hasDecks = computed(() => library.decks.length > 0)
 const favoriteIds = computed(() => new Set(library.favoriteDecks.map(deck => deck.id)))
 
 onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
   void library.loadDecks()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 
 function openDeck(deckId: string) {
@@ -47,6 +55,11 @@ function continueSession(event: MouseEvent, session: ActiveStudySessionSummary) 
   openSession(session)
 }
 
+function askDeleteSession(event: MouseEvent, session: ActiveStudySessionSummary) {
+  event.stopPropagation()
+  sessionPendingDelete.value = session
+}
+
 function openSession(session: ActiveStudySessionSummary) {
   void router.push({
     name: 'study',
@@ -70,10 +83,34 @@ function toggleFavorite(event: MouseEvent, deckId: string) {
   void library.setFavorite(deckId, !favoriteIds.value.has(deckId))
 }
 
+function isTyping(event: KeyboardEvent) {
+  const target = event.target as HTMLElement | null
+  const tag = target?.tagName.toLowerCase()
+  return tag === 'input' || tag === 'textarea' || Boolean(target?.isContentEditable)
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (isTyping(event)) return
+  if (event.key !== 'Escape') return
+  if (deckPendingDelete.value || sessionPendingDelete.value || exitDialogOpen.value) return
+  event.preventDefault()
+  exitDialogOpen.value = true
+}
+
 async function confirmDelete() {
   if (!deckPendingDelete.value) return
   await library.deleteDeck(deckPendingDelete.value)
   deckPendingDelete.value = null
+}
+
+async function confirmDeleteSession() {
+  if (!sessionPendingDelete.value) return
+  await library.deleteActiveSession(sessionPendingDelete.value.id)
+  sessionPendingDelete.value = null
+}
+
+async function confirmExit() {
+  await getCurrentWindow().close()
 }
 </script>
 
@@ -130,10 +167,20 @@ async function confirmDelete() {
             >
               <div class="flex items-start justify-between gap-3">
                 <h3 class="min-w-0 text-base font-bold group-hover:text-primary">{{ session.deckName }}</h3>
-                <BaseButton variant="primary" size="sm" @click="continueSession($event, session)">
-                  <Play class="h-3.5 w-3.5" />
-                  Continue
-                </BaseButton>
+                <div class="flex shrink-0 gap-2">
+                  <BaseButton variant="primary" size="sm" @click="continueSession($event, session)">
+                    <Play class="h-3.5 w-3.5" />
+                    Continue
+                  </BaseButton>
+                  <button
+                    class="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-secondary text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    :aria-label="`Delete saved session for ${session.deckName}`"
+                    title="Delete session"
+                    @click="askDeleteSession($event, session)"
+                  >
+                    <Trash2 class="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
               <div class="mt-4 grid grid-cols-3 gap-2 text-xs">
                 <div>
@@ -310,6 +357,22 @@ async function confirmDelete() {
       confirm-label="Delete"
       @cancel="deckPendingDelete = null"
       @confirm="confirmDelete"
+    />
+    <ConfirmDialog
+      :open="sessionPendingDelete !== null"
+      title="Delete session?"
+      :description="`This will delete the saved progress for '${sessionPendingDelete?.deckName ?? ''}'. The deck will stay in your library.`"
+      confirm-label="Delete session"
+      @cancel="sessionPendingDelete = null"
+      @confirm="confirmDeleteSession"
+    />
+    <ConfirmDialog
+      :open="exitDialogOpen"
+      title="Exit app?"
+      description="Close flashcards_desktop?"
+      confirm-label="Exit"
+      @cancel="exitDialogOpen = false"
+      @confirm="confirmExit"
     />
   </section>
 </template>

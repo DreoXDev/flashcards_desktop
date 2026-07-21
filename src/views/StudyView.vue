@@ -138,6 +138,7 @@ function goToCard(index: number) {
   currentIndex.value = index
   const card = cards.value[index]
   states.value[card.id].visited = true
+  states.value[card.id].answerVisible = false
 }
 
 function nextCard() {
@@ -274,6 +275,14 @@ function handleKeydown(event: KeyboardEvent) {
   if (event.code === 'Space' && currentCard.value?.cardType === 'open') {
     event.preventDefault()
     toggleOpenCard()
+  }
+  if (event.key === 'Enter' && currentCard.value?.cardType === 'open') {
+    event.preventDefault()
+    markCurrent('known')
+  }
+  if (event.key === 'Backspace' && currentCard.value?.cardType === 'open') {
+    event.preventDefault()
+    markCurrent('unknown')
   }
   if (event.key === 'ArrowRight') nextCard()
   if (event.key === 'ArrowLeft') previousCard()

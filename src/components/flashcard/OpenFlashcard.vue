@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { renderMarkdown } from '@/lib/markdown'
 import type { Flashcard } from '@/types/deck'
 
-defineProps<{
+const props = defineProps<{
   card: Flashcard
   revealed: boolean
 }>()
@@ -9,6 +11,8 @@ defineProps<{
 defineEmits<{
   toggle: []
 }>()
+
+const answerHtml = computed(() => renderMarkdown(props.card.answer))
 </script>
 
 <template>
@@ -30,10 +34,12 @@ defineEmits<{
       <div
         class="flashcard-face flashcard-back absolute inset-0 flex flex-col rounded-lg border border-primary/35 bg-card p-8 shadow-[0_0_48px_hsl(0_72%_51%/0.12)]"
       >
-        <p class="text-xs uppercase tracking-wider text-primary">Answer</p>
-        <div class="mt-5 min-h-0 overflow-auto text-lg leading-8 text-foreground">
-          {{ card.answer }}
+        <div class="rounded-md border border-border bg-background/60 p-4">
+          <p class="text-xs uppercase tracking-wider text-muted-foreground">Question</p>
+          <p class="mt-2 line-clamp-3 text-sm font-semibold leading-6 text-foreground">{{ card.question }}</p>
         </div>
+        <p class="mt-5 text-xs uppercase tracking-wider text-primary">Answer</p>
+        <div class="markdown-answer mt-5 min-h-0 overflow-auto text-lg leading-8 text-foreground" v-html="answerHtml"></div>
       </div>
     </div>
   </button>
@@ -59,5 +65,48 @@ defineEmits<{
 
 .flashcard-back {
   transform: rotateY(180deg);
+}
+
+.markdown-answer :deep(p + p),
+.markdown-answer :deep(ul + p),
+.markdown-answer :deep(p + ul) {
+  margin-top: 1rem;
+}
+
+.markdown-answer :deep(ul) {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+
+.markdown-answer :deep(li + li) {
+  margin-top: 0.35rem;
+}
+
+.markdown-answer :deep(strong) {
+  color: hsl(var(--foreground));
+  font-weight: 700;
+}
+
+.markdown-answer :deep(em) {
+  color: hsl(var(--foreground));
+}
+
+.markdown-answer :deep(code) {
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.25rem;
+  background: hsl(var(--muted));
+  padding: 0.1rem 0.35rem;
+  font-size: 0.9em;
+}
+
+.markdown-answer :deep(.markdown-link) {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.markdown-answer :deep(.markdown-url) {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.85em;
 }
 </style>

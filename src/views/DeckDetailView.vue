@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft, Shuffle, Rows3 } from 'lucide-vue-next'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -31,10 +31,51 @@ async function loadDeck() {
 }
 
 function startStudy() {
+  if (!deck.value || deck.value.cards.length === 0) return
   void router.push({ name: 'study', params: { deckId: props.deckId }, query: { mode: mode.value } })
 }
 
-onMounted(loadDeck)
+function isTyping(event: KeyboardEvent) {
+  const target = event.target as HTMLElement | null
+  const tag = target?.tagName.toLowerCase()
+  return tag === 'input' || tag === 'textarea' || Boolean(target?.isContentEditable)
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (isTyping(event)) return
+
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    void router.push('/')
+    return
+  }
+
+  if (event.key === '1') {
+    event.preventDefault()
+    mode.value = 'original'
+    return
+  }
+
+  if (event.key === '2') {
+    event.preventDefault()
+    mode.value = 'random'
+    return
+  }
+
+  if (event.key === 'Enter' && deck.value && deck.value.cards.length > 0) {
+    event.preventDefault()
+    startStudy()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+  void loadDeck()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>

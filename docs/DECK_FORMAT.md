@@ -55,6 +55,14 @@ Required: `id`, `type`, `question`, `answer`.
 
 Optional: `tags`, `source`, `notes`.
 
+Open-card answers can use simple Markdown for cleaner display:
+
+- `**bold**`
+- `*italic*`
+- `` `inline code` ``
+- bullet lists with `- item`
+- links like `[label](https://example.com)`
+
 ## Closed Card
 
 ```json
@@ -76,6 +84,8 @@ Required: `id`, `type`, `question`, `options`, `correctOptionIds`.
 Optional: `explanation`, `tags`, `source`, `notes`.
 
 `correctOptionIds` can contain more than one option id.
+
+Use `explanation` to explain why the correct answer is correct. It is shown after the user answers, especially useful when they choose a wrong option.
 
 ## Validation Rules
 
